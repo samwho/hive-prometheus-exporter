@@ -57,6 +57,36 @@ BATTERY = Gauge(
     ("home_id", "home_name", "type", "id", "name"),
 )
 
+TRV_TEMPERATURE = Gauge(
+    "hive_trv_temperature",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+TRV_WORKING = Gauge(
+    "hive_trv_working",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+TRV_TARGET = Gauge(
+    "hive_trv_target",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+TRV_MODE = Gauge(
+    "hive_trv_mode",
+    "",
+    ("home_id", "home_name", "type", "id", "name", "mode"),
+)
+
+TRV_AUTO_BOOSE_TARGET = Gauge(
+    "hive_trv_auto_boost_target",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
 
 def get_homes(client):
     url = f"https://beekeeper-uk.hivehome.com/1.0/nodes/all?"
@@ -88,72 +118,69 @@ def get_actions(client, home_id=None):
     return response.json()
 
 
-def poll(client):
-    logging.info("polling...")
-    client.refreshTokens()
-    for home in get_homes(client):
-        for device in get_devices(client, home["id"]):
-            ONLINE.labels(
+def handle_device(home, device):
+    if state := device.get("state", None):
+        ONLINE.labels(
+            home["id"],
+            home["name"],
+            device["type"],
+            device["id"],
+            state["name"],
+        ).set(1 if device["props"].get("online", False) else 0)
+
+        if props := device.get("props", None):
+            VERSION.labels(
                 home["id"],
                 home["name"],
                 device["type"],
                 device["id"],
-                device["state"]["name"],
-            ).set(1 if device["props"].get("online", False) else 0)
+                state["name"],
+                props["version"],
+            ).set(1)
 
-            if props := device.get("props", None):
-                VERSION.labels(
+            MODEL.labels(
+                home["id"],
+                home["name"],
+                device["type"],
+                device["id"],
+                state["name"],
+                props["model"],
+            ).set(1)
+
+            POWER.labels(
+                home["id"],
+                home["name"],
+                device["type"],
+                device["id"],
+                state["name"],
+                props["power"],
+            ).set(1)
+
+            if signal := props.get("signal", None):
+                SIGNAL.labels(
                     home["id"],
                     home["name"],
                     device["type"],
                     device["id"],
-                    device["state"]["name"],
-                    props["version"],
-                ).set(1)
+                    state["name"],
+                ).set(signal)
 
-                MODEL.labels(
+            if battery := props.get("battery", None):
+                BATTERY.labels(
                     home["id"],
                     home["name"],
                     device["type"],
                     device["id"],
-                    device["state"]["name"],
-                    props["model"],
-                ).set(1)
+                    state["name"],
+                ).set(battery)
 
-                POWER.labels(
-                    home["id"],
-                    home["name"],
-                    device["type"],
-                    device["id"],
-                    device["state"]["name"],
-                    props["power"],
-                ).set(1)
-
-                if signal := props.get("signal", None):
-                    SIGNAL.labels(
-                        home["id"],
-                        home["name"],
-                        device["type"],
-                        device["id"],
-                        device["state"]["name"],
-                    ).set(signal)
-
-                if battery := props.get("battery", None):
-                    BATTERY.labels(
-                        home["id"],
-                        home["name"],
-                        device["type"],
-                        device["id"],
-                        device["state"]["name"],
-                    ).set(battery)
-
-            if upgrade := device["props"].get("upgrade", None):
+            if upgrade := props.get("upgrade", None):
                 UPGRADE_AVAILABLE.labels(
                     home["id"],
                     home["name"],
                     device["type"],
                     device["id"],
-                    device["state"]["name"],
+                    state["name"],
                 ).set(1 if upgrade.get("available", False) else 0)
 
                 UPGRADING.labels(
@@ -161,7 +188,7 @@ def poll(client):
                     home["name"],
                     device["type"],
                     device["id"],
-                    device["state"]["name"],
+                    state["name"],
                 ).set(1 if upgrade.get("upgrading", False) else 0)
 
                 if status := upgrade.get("status", None):
@@ -170,9 +197,73 @@ def poll(client):
                         home["name"],
                         device["type"],
                         device["id"],
-                        device["state"]["name"],
+                        state["name"],
                         status,
                     ).set(1)
+
+
+def handle_product(home, product):
+    if product["type"] == "trvcontrol":
+        handle_trvcontrol(home, product)
+
+
+def handle_trvcontrol(home, product):
+    if state := product.get("state", None):
+        if target := state.get("target", None):
+            TRV_TARGET.labels(
+                home["id"],
+                home["name"],
+                product["type"],
+                product["id"],
+                state["name"],
+            ).set(target)
+
+        if mode := state.get("mode", None):
+            TRV_MODE.labels(
+                home["id"],
+                home["name"],
+                product["type"],
+                product["id"],
+                state["name"],
+                mode,
+            ).set(1)
+
+        if auto_boost_target := state.get("autoBoostTarget", None):
+            TRV_AUTO_BOOSE_TARGET.labels(
+                home["id"],
+                home["name"],
+                product["type"],
+                product["id"],
+                state["name"],
+            ).set(auto_boost_target)
+
+        if props := product.get("props", None):
+            TRV_WORKING.labels(
+                home["id"],
+                home["name"],
+                product["type"],
+                product["id"],
+                state["name"],
+            ).set(1 if props.get("working", False) else 0)
+
+            if temperature := props.get("temperature", None):
+                TRV_TEMPERATURE.labels(
+                    home["id"],
+                    home["name"],
+                    product["type"],
+                    product["id"],
+                    state["name"],
+                ).set(temperature)
+
+
+def poll(client):
+    logging.info("polling...")
+    client.refreshTokens()
+    for home in get_homes(client):
+        for device in get_devices(client, home["id"]):
+            handle_device(home, device)
+        for product in get_products(client, home["id"]):
+            handle_product(home, product)
 
     logging.info("polling done")
 
