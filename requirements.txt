@@ -1,3 +1,4 @@
 pyhiveapi==0.4.1
 prometheus-client==0.10.1
 apscheduler==3.7.0
+dpath==2.0.1
