@@ -11,7 +11,7 @@ from pyhiveapi import Hive, SMS_REQUIRED, API
 PORT = int(os.getenv("PORT", "8888"))
 HIVE_USERNAME = os.getenv("HIVE_USERNAME")
 HIVE_PASSWORD = os.getenv("HIVE_PASSWORD")
-POLLING_INTERVAL_SECONDS = os.getenv("POLLING_INTERVAL_SECONDS", 60)
+POLLING_INTERVAL_SECONDS = int(os.getenv("POLLING_INTERVAL_SECONDS", "60"))
 
 ONLINE = Gauge("hive_online", "", ("home_id", "home_name", "type", "id", "name"))
 
