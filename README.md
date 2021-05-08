@@ -28,5 +28,10 @@ And if you navigate to `http://localhost:8888` in your browser, you should see
 a bunch of Prometheus metrics. Anything starting with `hive_` is a metric that
 has been exported by this project.
 
+**Note:** This project currently doesn't support Hive Home accounts that have
+2FA enabled. You'll need to either disable 2FA to use this, or create a new
+Hive Home account without 2FA and share your home with it. The read-only
+permissions are sufficient.
+
 [1]: https://www.hivehome.com/
 [2]: https://prometheus.io/
