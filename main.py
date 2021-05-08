@@ -14,73 +14,135 @@ HIVE_PASSWORD = os.getenv("HIVE_PASSWORD")
 POLLING_INTERVAL_SECONDS = os.getenv("POLLING_INTERVAL_SECONDS", 60)
 
 ONLINE = Gauge("hive_online", "", ("home_id", "home_name", "type", "id", "name"))
+
 VERSION = Gauge(
     "hive_version",
     "",
     ("home_id", "home_name", "type", "id", "name", "version"),
 )
+
 MODEL = Gauge(
     "hive_model",
     "",
     ("home_id", "home_name", "type", "id", "name", "model"),
 )
+
+MODE = Gauge(
+    "hive_mode",
+    "",
+    ("home_id", "home_name", "type", "id", "name", "mode"),
+)
+
+MANUFACTURER = Gauge(
+    "hive_manufacturer",
+    "",
+    ("home_id", "home_name", "type", "id", "name", "manufacturer"),
+)
+
+IN_USE = Gauge(
+    "hive_in_use",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
 UPGRADE_AVAILABLE = Gauge(
     "hive_upgrade_available",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
+
 UPGRADING = Gauge(
     "hive_upgrading",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
+
 UPGRADE_STATUS = Gauge(
     "hive_upgrade_status",
     "",
     ("home_id", "home_name", "type", "id", "name", "status"),
 )
+
+WORKING = Gauge(
+    "hive_working",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+TARGET = Gauge(
+    "hive_target",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+BRIGHTNESS = Gauge(
+    "hive_brightness",
+    "",
+    ("home_id", "home_name", "type", "id", "name", "group"),
+)
+
+MOTION = Gauge(
+    "hive_motion",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
 POWER = Gauge(
     "hive_power",
     "",
     ("home_id", "home_name", "type", "id", "name", "power"),
 )
+
 SIGNAL = Gauge(
     "hive_signal",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
+
 BATTERY = Gauge(
     "hive_battery",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
 
-TRV_TEMPERATURE = Gauge(
-    "hive_trv_temperature",
+HOLIDAY_MODE_ACTIVE = Gauge(
+    "hive_holiday_mode_active",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
 
-TRV_WORKING = Gauge(
-    "hive_trv_working",
+HOLIDAY_MODE_ENABLED = Gauge(
+    "hive_holiday_mode_enabled",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
 
-TRV_TARGET = Gauge(
-    "hive_trv_target",
+TEMPERATURE = Gauge(
+    "hive_temperature",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
 
-TRV_MODE = Gauge(
-    "hive_trv_mode",
+SCHEDULE_OVERRIDE = Gauge(
+    "hive_schedule_override",
     "",
-    ("home_id", "home_name", "type", "id", "name", "mode"),
+    ("home_id", "home_name", "type", "id", "name"),
 )
 
-TRV_AUTO_BOOSE_TARGET = Gauge(
-    "hive_trv_auto_boost_target",
+AUTO_BOOST_ACTIVE = Gauge(
+    "hive_auto_boost_active",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+AUTO_BOOST_TARGET = Gauge(
+    "hive_auto_boost_target",
+    "",
+    ("home_id", "home_name", "type", "id", "name"),
+)
+
+AUTO_BOOST_DURATION = Gauge(
+    "hive_auto_boost_duration",
     "",
     ("home_id", "home_name", "type", "id", "name"),
 )
@@ -201,23 +263,9 @@ def handle_device(home, device):
 
 
 def handle_product(home, product):
-    if product["type"] == "trvcontrol":
-        handle_trvcontrol(home, product)
-
-
-def handle_trvcontrol(home, product):
     if state := product.get("state", None):
-        if target := state.get("target", None):
-            TRV_TARGET.labels(
-                home["id"],
-                home["name"],
-                product["type"],
-                product["id"],
-                state["name"],
-            ).set(target)
-
         if mode := state.get("mode", None):
-            TRV_MODE.labels(
+            MODE.labels(
                 home["id"],
                 home["name"],
                 product["type"],
@@ -226,32 +274,138 @@ def handle_trvcontrol(home, product):
                 mode,
             ).set(1)
 
-        if auto_boost_target := state.get("autoBoostTarget", None):
-            TRV_AUTO_BOOSE_TARGET.labels(
+        if brightness := state.get("brightness", None):
+            BRIGHTNESS.labels(
                 home["id"],
                 home["name"],
                 product["type"],
                 product["id"],
                 state["name"],
-            ).set(auto_boost_target)
+                "true" if state.get("isGroup", False) else "false",
+            ).set(brightness)
+
+        if target := state.get("target", None):
+            TARGET.labels(
+                home["id"],
+                home["name"],
+                product["type"],
+                product["id"],
+                state["name"],
+            ).set(target)
 
         if props := product.get("props", None):
-            TRV_WORKING.labels(
-                home["id"],
-                home["name"],
-                product["type"],
-                product["id"],
-                state["name"],
-            ).set(1 if props.get("working", False) else 0)
+            if motion := props.get("motion", None):
+                if status := motion.get("status", None):
+                    MOTION.labels(
+                        home["id"],
+                        home["name"],
+                        product["type"],
+                        product["id"],
+                        state["name"],
+                    ).set(1 if status else 0)
+
+            if model := props.get("model", None):
+                MODEL.labels(
+                    home["id"],
+                    home["name"],
+                    product["type"],
+                    product["id"],
+                    state["name"],
+                    model,
+                ).set(1)
+
+            if manufacturer := props.get("manufacturer", None):
+                MANUFACTURER.labels(
+                    home["id"],
+                    home["name"],
+                    product["type"],
+                    product["id"],
+                    state["name"],
+                    manufacturer,
+                ).set(1)
+
+            if in_use := props.get("inUse", None):
+                IN_USE.labels(
+                    home["id"],
+                    home["name"],
+                    product["type"],
+                    product["id"],
+                    state["name"],
+                ).set(1 if in_use else 0)
 
             if temperature := props.get("temperature", None):
-                TRV_TEMPERATURE.labels(
+                TEMPERATURE.labels(
                     home["id"],
                     home["name"],
                     product["type"],
                     product["id"],
                     state["name"],
                 ).set(temperature)
+
+            if working := props.get("working", None):
+                WORKING.labels(
+                    home["id"],
+                    home["name"],
+                    product["type"],
+                    product["id"],
+                    state["name"],
+                ).set(1 if working else 0)
+
+            if schedule_override := props.get("scheduleOverride", None):
+                SCHEDULE_OVERRIDE.labels(
+                    home["id"],
+                    home["name"],
+                    product["type"],
+                    product["id"],
+                    state["name"],
+                ).set(1 if schedule_override else 0)
+
+            if auto_boost := props.get("autoBoost", None):
+                if auto_boost_target := auto_boost.get("target", None):
+                    AUTO_BOOST_TARGET.labels(
+                        home["id"],
+                        home["name"],
+                        product["type"],
+                        product["id"],
+                        state["name"],
+                    ).set(auto_boost_target)
+
+                if auto_boost_active := auto_boost.get("active", None):
+                    AUTO_BOOST_ACTIVE.labels(
+                        home["id"],
+                        home["name"],
+                        product["type"],
+                        product["id"],
+                        state["name"],
+                    ).set(1 if auto_boost_active else 0)
+
+                if auto_boost_duration := auto_boost.get("duration", None):
+                    AUTO_BOOST_DURATION.labels(
+                        home["id"],
+                        home["name"],
+                        product["type"],
+                        product["id"],
+                        state["name"],
+                    ).set(auto_boost_duration)
+
+            if holiday_mode := props.get("holidayMode", None):
+                if holiday_mode_active := holiday_mode.get("active", None):
+                    HOLIDAY_MODE_ACTIVE.labels(
+                        home["id"],
+                        home["name"],
+                        product["type"],
+                        product["id"],
+                        state["name"],
+                    ).set(1 if holiday_mode_active else 0)
+
+                if holiday_mode_enabled := holiday_mode.get("enabled", None):
+                    HOLIDAY_MODE_ENABLED.labels(
+                        home["id"],
+                        home["name"],
+                        product["type"],
+                        product["id"],
+                        state["name"],
+                    ).set(1 if holiday_mode_enabled else 0)
 
 
 def poll(client):
