@@ -29,9 +29,3 @@ jobs:
           tags: samwho/hive-prometheus-exporter:latest
           cache-from: type=registry,ref=samwho/hive-prometheus-exporter
           cache-to: type=inline
-      - name: Update repo description
-        uses: peter-evans/dockerhub-description@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          repository: samwho/hive-prometheus-exporter
