@@ -7,7 +7,6 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 from apscheduler.schedulers.blocking import BlockingScheduler
 from prometheus_client import start_http_server, Counter, Gauge, Info
 from pyhiveapi import Hive, SMS_REQUIRED, API
-from dpath.util import search
 
 PORT = int(os.getenv("PORT", "8888"))
 HIVE_USERNAME = os.getenv("HIVE_USERNAME")
